@@ -1316,7 +1316,11 @@
     el.style.padding = '32px';
     el.style.background = '#FFFFFF';
     el.style.color = '#141310';
-    el.style.maxWidth = '800px';
+    el.style.width = '760px';
+    el.style.maxWidth = '760px';
+    el.style.boxSizing = 'border-box';
+    el.style.overflow = 'hidden';
+    el.style.wordBreak = 'break-word';
     const a = currentAppraisal;
     el.innerHTML = `
       <div style="display:flex;align-items:center;gap:14px;margin-bottom:18px;border-bottom:2px solid #E5E0D4;padding-bottom:14px;">
@@ -1334,24 +1338,25 @@
     // Inline the read-only styles for PDF rendering
     const styles = document.createElement('style');
     styles.textContent = `
-      .ro-section { margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid #E5E0D4; page-break-inside: avoid; }
+      *, *::before, *::after { box-sizing: border-box; }
+      .ro-section { margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid #E5E0D4; page-break-inside: avoid; max-width: 100%; }
       .ro-section:last-child { border-bottom: none; }
       .ro-h { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #928E85; margin-bottom: 10px; }
-      .ro-pair { display: grid; grid-template-columns: 180px 1fr; gap: 10px; margin-bottom: 6px; }
-      .ro-pair .k { font-size: 12px; color: #928E85; }
-      .ro-pair .v { font-size: 13px; color: #141310; word-break: break-word; }
-      .ro-narrative { margin-bottom: 12px; }
+      .ro-pair { display: grid; grid-template-columns: 160px 1fr; gap: 10px; margin-bottom: 6px; max-width: 100%; }
+      .ro-pair .k { font-size: 12px; color: #928E85; word-break: break-word; }
+      .ro-pair .v { font-size: 13px; color: #141310; word-break: break-word; overflow-wrap: anywhere; min-width: 0; }
+      .ro-narrative { margin-bottom: 12px; max-width: 100%; }
       .ro-narrative .lbl { font-size: 12px; color: #928E85; margin-bottom: 4px; }
-      .ro-narrative .v { font-size: 13px; line-height: 1.55; padding: 8px 12px; background: #FBF9F4; border: 1px solid #E5E0D4; border-radius: 7px; white-space: pre-wrap; }
-      .ro-factor { padding: 10px 0; border-bottom: 1px solid #E5E0D4; page-break-inside: avoid; }
+      .ro-narrative .v { font-size: 13px; line-height: 1.55; padding: 8px 12px; background: #FBF9F4; border: 1px solid #E5E0D4; border-radius: 7px; white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; max-width: 100%; }
+      .ro-factor { padding: 10px 0; border-bottom: 1px solid #E5E0D4; page-break-inside: avoid; max-width: 100%; }
       .ro-factor:last-child { border-bottom: none; padding-bottom: 0; }
       .ro-factor:first-child { padding-top: 0; }
-      .ro-factor-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 5px; }
-      .ro-factor-name { font-size: 13px; font-weight: 500; color: #141310; flex: 1; }
+      .ro-factor-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 5px; max-width: 100%; }
+      .ro-factor-name { font-size: 13px; font-weight: 500; color: #141310; flex: 1; min-width: 0; word-break: break-word; }
       .ro-factor-num { font-family: 'DM Mono', monospace; color: #928E85; font-size: 11px; margin-right: 8px; }
       .ro-factor-no-grade { color: #928E85; font-size: 12px; font-style: italic; }
-      .ro-factor-comments { font-size: 12px; color: #5E5A52; line-height: 1.55; padding-left: 28px; word-break: break-word; white-space: pre-wrap; }
-      .ro-grade-pill { display: inline-block; padding: 2px 8px; border-radius: 5px; font-family: 'DM Mono', monospace; font-weight: 700; font-size: 12px; flex-shrink: 0; }
+      .ro-factor-comments { font-size: 12px; color: #5E5A52; line-height: 1.55; padding-left: 28px; padding-right: 4px; word-break: break-word; overflow-wrap: anywhere; white-space: pre-wrap; max-width: 100%; }
+      .ro-grade-pill { display: inline-block; padding: 2px 8px; border-radius: 5px; font-family: 'DM Mono', monospace; font-weight: 700; font-size: 12px; flex-shrink: 0; white-space: nowrap; }
       .ro-grade-pill[data-g="A"] { background: #D6E8DC; color: #1B4A34; }
       .ro-grade-pill[data-g="B"] { background: #E1EDE5; color: #2E6348; }
       .ro-grade-pill[data-g="C"] { background: #E6EDF4; color: #274B6D; }
@@ -1363,7 +1368,7 @@
       margin: [12, 12, 12, 12],
       filename: filename,
       image: { type: 'jpeg', quality: 0.95 },
-      html2canvas: { scale: 2, useCORS: true },
+      html2canvas: { scale: 2, useCORS: true, windowWidth: 800, scrollX: 0, scrollY: 0 },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     }).from(el).save();
   }
