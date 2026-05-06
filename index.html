@@ -1359,40 +1359,46 @@
       ${renderAppraisalReadOnly(a)}
     `;
 
-    // Append in normal document coordinates (top-left) but visually hidden via opacity.
-    // html2canvas measures relative to document coordinates, so position: fixed at
-    // left: -10000 was causing the canvas to capture from a wrong/partial origin.
+    // Render element must be visible in the DOM for html2canvas to capture it correctly.
+    // Both opacity:0 and visibility:hidden cause html2canvas to produce blank output, and
+    // off-screen positioning (left: -10000) makes html2canvas capture from the wrong x-coord.
+    // So we render visibly at top-left, but cover the page with an overlay so the user
+    // doesn't see the clone flash on screen during the brief render.
     el.style.position = 'absolute';
     el.style.top = '0';
     el.style.left = '0';
-    el.style.opacity = '0';
-    el.style.pointerEvents = 'none';
-    el.style.zIndex = '-1';
+    el.style.zIndex = '99998';
     document.body.appendChild(el);
 
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(245,242,234,0.96);z-index:99999;display:flex;align-items:center;justify-content:center;font-family:\'DM Sans\',sans-serif;';
+    overlay.innerHTML = '<div style="text-align:center;"><div style="width:32px;height:32px;border:3px solid #CFC9BA;border-top-color:#1E4A37;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 14px;"></div><div style="font-size:14px;color:#5E5A52;">Generating PDF…</div></div>';
+    document.body.appendChild(overlay);
+
+    const cleanup = () => {
+      if (el.parentNode) el.parentNode.removeChild(el);
+      if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+    };
+
     const filename = 'staff-appraisal_' + (a.staffName || 'unknown').replace(/\s+/g, '_') + '_' + (a.clientNames || '').replace(/[^A-Za-z0-9]/g, '_') + '.pdf';
-    html2pdf().set({
-      margin: [12, 12, 12, 12],
-      filename: filename,
-      image: { type: 'jpeg', quality: 0.95 },
-      html2canvas: {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: '#FFFFFF',
-        // Force html2canvas to render at the element's actual width regardless of
-        // viewport size or scroll position. This is the key fix for the cropping bug.
-        width: 700,
-        windowWidth: 700
-      },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-      pagebreak: { mode: ['css', 'legacy'] }
-    }).from(el).save().then(() => {
-      if (el.parentNode) el.parentNode.removeChild(el);
-    }).catch((err) => {
-      console.error('PDF export failed:', err);
-      if (el.parentNode) el.parentNode.removeChild(el);
-      alert('PDF export failed: ' + err.message);
-    });
+
+    // Wait one tick so the layout settles before html2canvas captures.
+    setTimeout(() => {
+      html2pdf().set({
+        margin: [12, 12, 12, 12],
+        filename: filename,
+        image: { type: 'jpeg', quality: 0.95 },
+        html2canvas: { scale: 2, useCORS: true, backgroundColor: '#FFFFFF' },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+        pagebreak: { mode: ['css', 'legacy'] }
+      }).from(el).save().then(() => {
+        cleanup();
+      }).catch((err) => {
+        console.error('PDF export failed:', err);
+        cleanup();
+        alert('PDF export failed: ' + err.message);
+      });
+    }, 50);
   }
   function exportCSV() {
     document.getElementById('export-menu').classList.remove('show');
