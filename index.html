@@ -1310,67 +1310,89 @@
   function exportPDF() {
     document.getElementById('export-menu').classList.remove('show');
     if (!currentAppraisal) return;
-    // Build a self-contained printable element with the same look as the form
-    const el = document.createElement('div');
-    el.style.fontFamily = "'DM Sans', sans-serif";
-    el.style.padding = '32px';
-    el.style.background = '#FFFFFF';
-    el.style.color = '#141310';
-    el.style.width = '760px';
-    el.style.maxWidth = '760px';
-    el.style.boxSizing = 'border-box';
-    el.style.overflow = 'hidden';
-    el.style.wordBreak = 'break-word';
     const a = currentAppraisal;
+
+    // Build a self-contained printable element. Critical: it must be attached to
+    // the DOM before html2pdf reads it, otherwise html2canvas produces a blank canvas.
+    const el = document.createElement('div');
+    el.id = 'pdf-render-target';
     el.innerHTML = `
-      <div style="display:flex;align-items:center;gap:14px;margin-bottom:18px;border-bottom:2px solid #E5E0D4;padding-bottom:14px;">
-        <img src="${document.getElementById('hero-logo').src}" alt="Luckmans" style="height:50px;" onerror="this.style.display='none';" />
+      <style>
+        #pdf-render-target *, #pdf-render-target *::before, #pdf-render-target *::after { box-sizing: border-box; }
+        #pdf-render-target { font-family: 'DM Sans', Arial, sans-serif; background: #FFFFFF; color: #141310; width: 700px; padding: 24px; box-sizing: border-box; word-break: break-word; overflow-wrap: anywhere; }
+        #pdf-render-target .pdf-hdr { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; border-bottom: 2px solid #E5E0D4; padding-bottom: 14px; }
+        #pdf-render-target .pdf-hdr img { height: 50px; }
+        #pdf-render-target .pdf-eyebrow { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: #928E85; }
+        #pdf-render-target .pdf-h1 { font-family: 'Fraunces', Georgia, serif; font-weight: 600; font-size: 26px; letter-spacing: -0.6px; margin: 0; color: #141310; }
+        #pdf-render-target .pdf-meta { font-size: 12px; color: #5E5A52; margin-bottom: 14px; }
+        #pdf-render-target .ro-section { margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid #E5E0D4; page-break-inside: avoid; }
+        #pdf-render-target .ro-section:last-child { border-bottom: none; padding-bottom: 0; }
+        #pdf-render-target .ro-h { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #928E85; margin-bottom: 10px; }
+        #pdf-render-target .ro-pair { display: grid; grid-template-columns: 160px 1fr; gap: 10px; margin-bottom: 6px; }
+        #pdf-render-target .ro-pair .k { font-size: 12px; color: #928E85; }
+        #pdf-render-target .ro-pair .v { font-size: 13px; color: #141310; min-width: 0; word-break: break-word; overflow-wrap: anywhere; }
+        #pdf-render-target .ro-narrative { margin-bottom: 12px; }
+        #pdf-render-target .ro-narrative .lbl { font-size: 12px; color: #928E85; margin-bottom: 4px; }
+        #pdf-render-target .ro-narrative .v { font-size: 13px; line-height: 1.55; padding: 8px 12px; background: #FBF9F4; border: 1px solid #E5E0D4; border-radius: 7px; white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; }
+        #pdf-render-target .ro-factor { padding: 10px 0; border-bottom: 1px solid #E5E0D4; page-break-inside: avoid; }
+        #pdf-render-target .ro-factor:last-child { border-bottom: none; padding-bottom: 0; }
+        #pdf-render-target .ro-factor:first-child { padding-top: 0; }
+        #pdf-render-target .ro-factor-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 5px; }
+        #pdf-render-target .ro-factor-name { font-size: 13px; font-weight: 500; color: #141310; flex: 1 1 auto; min-width: 0; word-break: break-word; }
+        #pdf-render-target .ro-factor-num { font-family: 'DM Mono', monospace; color: #928E85; font-size: 11px; margin-right: 8px; }
+        #pdf-render-target .ro-factor-no-grade { color: #928E85; font-size: 12px; font-style: italic; }
+        #pdf-render-target .ro-factor-comments { font-size: 12px; color: #5E5A52; line-height: 1.55; padding-left: 28px; padding-right: 4px; word-break: break-word; overflow-wrap: anywhere; white-space: pre-wrap; }
+        #pdf-render-target .ro-grade-pill { display: inline-block; padding: 2px 8px; border-radius: 5px; font-family: 'DM Mono', monospace; font-weight: 700; font-size: 12px; flex: 0 0 auto; white-space: nowrap; }
+        #pdf-render-target .ro-grade-pill[data-g="A"] { background: #D6E8DC; color: #1B4A34; }
+        #pdf-render-target .ro-grade-pill[data-g="B"] { background: #E1EDE5; color: #2E6348; }
+        #pdf-render-target .ro-grade-pill[data-g="C"] { background: #E6EDF4; color: #274B6D; }
+        #pdf-render-target .ro-grade-pill[data-g="D"] { background: #F7E5E5; color: #8B3030; }
+      </style>
+      <div class="pdf-hdr">
+        <img src="${document.getElementById('hero-logo').src}" alt="Luckmans" onerror="this.style.display='none';" />
         <div>
-          <div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#928E85;">Engagement appraisal</div>
-          <h1 style="font-family:'Fraunces',serif;font-weight:600;font-size:26px;letter-spacing:-0.6px;margin:0;">Staff Appraisal Form</h1>
+          <div class="pdf-eyebrow">Engagement appraisal</div>
+          <div class="pdf-h1">Staff Appraisal Form</div>
         </div>
       </div>
-      <div style="font-size:12px;color:#5E5A52;margin-bottom:14px;">
-        <strong>${esc(a.staffName)}</strong> · ${esc(a.clientNames || '')} · completed ${esc(a.completedAt)} by ${esc(a.managerName)}
-      </div>
+      <div class="pdf-meta"><strong>${esc(a.staffName)}</strong> · ${esc(a.clientNames || '')} · completed ${esc(a.completedAt)} by ${esc(a.managerName)}</div>
       ${renderAppraisalReadOnly(a)}
     `;
-    // Inline the read-only styles for PDF rendering
-    const styles = document.createElement('style');
-    styles.textContent = `
-      *, *::before, *::after { box-sizing: border-box; }
-      .ro-section { margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid #E5E0D4; page-break-inside: avoid; max-width: 100%; }
-      .ro-section:last-child { border-bottom: none; }
-      .ro-h { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #928E85; margin-bottom: 10px; }
-      .ro-pair { display: grid; grid-template-columns: 160px 1fr; gap: 10px; margin-bottom: 6px; max-width: 100%; }
-      .ro-pair .k { font-size: 12px; color: #928E85; word-break: break-word; }
-      .ro-pair .v { font-size: 13px; color: #141310; word-break: break-word; overflow-wrap: anywhere; min-width: 0; }
-      .ro-narrative { margin-bottom: 12px; max-width: 100%; }
-      .ro-narrative .lbl { font-size: 12px; color: #928E85; margin-bottom: 4px; }
-      .ro-narrative .v { font-size: 13px; line-height: 1.55; padding: 8px 12px; background: #FBF9F4; border: 1px solid #E5E0D4; border-radius: 7px; white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; max-width: 100%; }
-      .ro-factor { padding: 10px 0; border-bottom: 1px solid #E5E0D4; page-break-inside: avoid; max-width: 100%; }
-      .ro-factor:last-child { border-bottom: none; padding-bottom: 0; }
-      .ro-factor:first-child { padding-top: 0; }
-      .ro-factor-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 5px; max-width: 100%; }
-      .ro-factor-name { font-size: 13px; font-weight: 500; color: #141310; flex: 1; min-width: 0; word-break: break-word; }
-      .ro-factor-num { font-family: 'DM Mono', monospace; color: #928E85; font-size: 11px; margin-right: 8px; }
-      .ro-factor-no-grade { color: #928E85; font-size: 12px; font-style: italic; }
-      .ro-factor-comments { font-size: 12px; color: #5E5A52; line-height: 1.55; padding-left: 28px; padding-right: 4px; word-break: break-word; overflow-wrap: anywhere; white-space: pre-wrap; max-width: 100%; }
-      .ro-grade-pill { display: inline-block; padding: 2px 8px; border-radius: 5px; font-family: 'DM Mono', monospace; font-weight: 700; font-size: 12px; flex-shrink: 0; white-space: nowrap; }
-      .ro-grade-pill[data-g="A"] { background: #D6E8DC; color: #1B4A34; }
-      .ro-grade-pill[data-g="B"] { background: #E1EDE5; color: #2E6348; }
-      .ro-grade-pill[data-g="C"] { background: #E6EDF4; color: #274B6D; }
-      .ro-grade-pill[data-g="D"] { background: #F7E5E5; color: #8B3030; }
-    `;
-    el.prepend(styles);
+
+    // Append in normal document coordinates (top-left) but visually hidden via opacity.
+    // html2canvas measures relative to document coordinates, so position: fixed at
+    // left: -10000 was causing the canvas to capture from a wrong/partial origin.
+    el.style.position = 'absolute';
+    el.style.top = '0';
+    el.style.left = '0';
+    el.style.opacity = '0';
+    el.style.pointerEvents = 'none';
+    el.style.zIndex = '-1';
+    document.body.appendChild(el);
+
     const filename = 'staff-appraisal_' + (a.staffName || 'unknown').replace(/\s+/g, '_') + '_' + (a.clientNames || '').replace(/[^A-Za-z0-9]/g, '_') + '.pdf';
     html2pdf().set({
       margin: [12, 12, 12, 12],
       filename: filename,
       image: { type: 'jpeg', quality: 0.95 },
-      html2canvas: { scale: 2, useCORS: true, windowWidth: 800, scrollX: 0, scrollY: 0 },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    }).from(el).save();
+      html2canvas: {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#FFFFFF',
+        // Force html2canvas to render at the element's actual width regardless of
+        // viewport size or scroll position. This is the key fix for the cropping bug.
+        width: 700,
+        windowWidth: 700
+      },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      pagebreak: { mode: ['css', 'legacy'] }
+    }).from(el).save().then(() => {
+      if (el.parentNode) el.parentNode.removeChild(el);
+    }).catch((err) => {
+      console.error('PDF export failed:', err);
+      if (el.parentNode) el.parentNode.removeChild(el);
+      alert('PDF export failed: ' + err.message);
+    });
   }
   function exportCSV() {
     document.getElementById('export-menu').classList.remove('show');
