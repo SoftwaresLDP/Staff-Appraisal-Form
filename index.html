@@ -1312,93 +1312,61 @@
     if (!currentAppraisal) return;
     const a = currentAppraisal;
 
-    // Build a self-contained printable element. Critical: it must be attached to
-    // the DOM before html2pdf reads it, otherwise html2canvas produces a blank canvas.
-    const el = document.createElement('div');
-    el.id = 'pdf-render-target';
-    el.innerHTML = `
-      <style>
-        #pdf-render-target *, #pdf-render-target *::before, #pdf-render-target *::after { box-sizing: border-box; }
-        #pdf-render-target { font-family: 'DM Sans', Arial, sans-serif; background: #FFFFFF; color: #141310; width: 700px; padding: 24px; box-sizing: border-box; word-break: break-word; overflow-wrap: anywhere; }
-        #pdf-render-target .pdf-hdr { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; border-bottom: 2px solid #E5E0D4; padding-bottom: 14px; }
-        #pdf-render-target .pdf-hdr img { height: 50px; }
-        #pdf-render-target .pdf-eyebrow { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: #928E85; }
-        #pdf-render-target .pdf-h1 { font-family: 'Fraunces', Georgia, serif; font-weight: 600; font-size: 26px; letter-spacing: -0.6px; margin: 0; color: #141310; }
-        #pdf-render-target .pdf-meta { font-size: 12px; color: #5E5A52; margin-bottom: 14px; }
-        #pdf-render-target .ro-section { margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid #E5E0D4; page-break-inside: avoid; }
-        #pdf-render-target .ro-section:last-child { border-bottom: none; padding-bottom: 0; }
-        #pdf-render-target .ro-h { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #928E85; margin-bottom: 10px; }
-        #pdf-render-target .ro-pair { display: grid; grid-template-columns: 160px 1fr; gap: 10px; margin-bottom: 6px; }
-        #pdf-render-target .ro-pair .k { font-size: 12px; color: #928E85; }
-        #pdf-render-target .ro-pair .v { font-size: 13px; color: #141310; min-width: 0; word-break: break-word; overflow-wrap: anywhere; }
-        #pdf-render-target .ro-narrative { margin-bottom: 12px; }
-        #pdf-render-target .ro-narrative .lbl { font-size: 12px; color: #928E85; margin-bottom: 4px; }
-        #pdf-render-target .ro-narrative .v { font-size: 13px; line-height: 1.55; padding: 8px 12px; background: #FBF9F4; border: 1px solid #E5E0D4; border-radius: 7px; white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; }
-        #pdf-render-target .ro-factor { padding: 10px 0; border-bottom: 1px solid #E5E0D4; page-break-inside: avoid; }
-        #pdf-render-target .ro-factor:last-child { border-bottom: none; padding-bottom: 0; }
-        #pdf-render-target .ro-factor:first-child { padding-top: 0; }
-        #pdf-render-target .ro-factor-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 5px; }
-        #pdf-render-target .ro-factor-name { font-size: 13px; font-weight: 500; color: #141310; flex: 1 1 auto; min-width: 0; word-break: break-word; }
-        #pdf-render-target .ro-factor-num { font-family: 'DM Mono', monospace; color: #928E85; font-size: 11px; margin-right: 8px; }
-        #pdf-render-target .ro-factor-no-grade { color: #928E85; font-size: 12px; font-style: italic; }
-        #pdf-render-target .ro-factor-comments { font-size: 12px; color: #5E5A52; line-height: 1.55; padding-left: 28px; padding-right: 4px; word-break: break-word; overflow-wrap: anywhere; white-space: pre-wrap; }
-        #pdf-render-target .ro-grade-pill { display: inline-block; padding: 2px 8px; border-radius: 5px; font-family: 'DM Mono', monospace; font-weight: 700; font-size: 12px; flex: 0 0 auto; white-space: nowrap; }
-        #pdf-render-target .ro-grade-pill[data-g="A"] { background: #D6E8DC; color: #1B4A34; }
-        #pdf-render-target .ro-grade-pill[data-g="B"] { background: #E1EDE5; color: #2E6348; }
-        #pdf-render-target .ro-grade-pill[data-g="C"] { background: #E6EDF4; color: #274B6D; }
-        #pdf-render-target .ro-grade-pill[data-g="D"] { background: #F7E5E5; color: #8B3030; }
-      </style>
-      <div class="pdf-hdr">
-        <img src="${document.getElementById('hero-logo').src}" alt="Luckmans" onerror="this.style.display='none';" />
-        <div>
-          <div class="pdf-eyebrow">Engagement appraisal</div>
-          <div class="pdf-h1">Staff Appraisal Form</div>
-        </div>
-      </div>
-      <div class="pdf-meta"><strong>${esc(a.staffName)}</strong> · ${esc(a.clientNames || '')} · completed ${esc(a.completedAt)} by ${esc(a.managerName)}</div>
-      ${renderAppraisalReadOnly(a)}
-    `;
+    // Render the on-page completed card directly. It's already laid out, all CSS rules
+    // already apply, fonts loaded — html2canvas can capture it cleanly. We just
+    // (1) temporarily hide the export bar (not meant for PDF), and
+    // (2) insert a temporary header with logo + title at the top.
+    const card = document.getElementById('completed-card');
+    if (!card) { alert('Completed card not found.'); return; }
 
-    // Render element must be visible in the DOM for html2canvas to capture it correctly.
-    // Both opacity:0 and visibility:hidden cause html2canvas to produce blank output, and
-    // off-screen positioning (left: -10000) makes html2canvas capture from the wrong x-coord.
-    // So we render visibly at top-left, but cover the page with an overlay so the user
-    // doesn't see the clone flash on screen during the brief render.
-    el.style.position = 'absolute';
-    el.style.top = '0';
-    el.style.left = '0';
-    el.style.zIndex = '99998';
-    document.body.appendChild(el);
+    const exportBar = card.querySelector('.export-bar');
+    const exportBarDisplay = exportBar ? exportBar.style.display : '';
+    if (exportBar) exportBar.style.display = 'none';
 
+    const tmpHeader = document.createElement('div');
+    tmpHeader.style.cssText = 'display:flex;align-items:center;gap:14px;margin-bottom:18px;padding-bottom:14px;border-bottom:2px solid #E5E0D4;';
+    tmpHeader.innerHTML =
+      '<img src="' + document.getElementById('hero-logo').src + '" alt="Luckmans" style="height:48px;" onerror="this.style.display=\'none\';" />' +
+      '<div>' +
+        '<div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#928E85;">Engagement appraisal</div>' +
+        '<div style="font-family:\'Fraunces\',Georgia,serif;font-weight:600;font-size:24px;letter-spacing:-0.5px;color:#141310;">Staff Appraisal Form</div>' +
+        '<div style="font-size:12px;color:#5E5A52;margin-top:4px;">' +
+          '<strong>' + esc(a.staffName) + '</strong>' +
+          (a.clientNames ? ' · ' + esc(a.clientNames) : '') +
+          ' · completed ' + esc(a.completedAt) + ' by ' + esc(a.managerName) +
+        '</div>' +
+      '</div>';
+    card.insertBefore(tmpHeader, card.firstChild);
+
+    // Overlay so the user doesn't see the export bar disappear / header appear during render
     const overlay = document.createElement('div');
     overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(245,242,234,0.96);z-index:99999;display:flex;align-items:center;justify-content:center;font-family:\'DM Sans\',sans-serif;';
     overlay.innerHTML = '<div style="text-align:center;"><div style="width:32px;height:32px;border:3px solid #CFC9BA;border-top-color:#1E4A37;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 14px;"></div><div style="font-size:14px;color:#5E5A52;">Generating PDF…</div></div>';
     document.body.appendChild(overlay);
 
     const cleanup = () => {
-      if (el.parentNode) el.parentNode.removeChild(el);
+      if (tmpHeader.parentNode) tmpHeader.parentNode.removeChild(tmpHeader);
+      if (exportBar) exportBar.style.display = exportBarDisplay;
       if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
     };
 
     const filename = 'staff-appraisal_' + (a.staffName || 'unknown').replace(/\s+/g, '_') + '_' + (a.clientNames || '').replace(/[^A-Za-z0-9]/g, '_') + '.pdf';
 
-    // Wait one tick so the layout settles before html2canvas captures.
+    // Slight delay so the layout reflows after inserting/hiding before capture.
     setTimeout(() => {
       html2pdf().set({
         margin: [12, 12, 12, 12],
         filename: filename,
         image: { type: 'jpeg', quality: 0.95 },
-        html2canvas: { scale: 2, useCORS: true, backgroundColor: '#FFFFFF' },
+        html2canvas: { scale: 2, useCORS: true, backgroundColor: '#FFFFFF', logging: false },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
         pagebreak: { mode: ['css', 'legacy'] }
-      }).from(el).save().then(() => {
-        cleanup();
-      }).catch((err) => {
+      }).from(card).save().then(cleanup).catch((err) => {
         console.error('PDF export failed:', err);
         cleanup();
         alert('PDF export failed: ' + err.message);
       });
-    }, 50);
+    }, 200);
   }
   function exportCSV() {
     document.getElementById('export-menu').classList.remove('show');
