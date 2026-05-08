@@ -228,10 +228,10 @@
   .ro-h2 { font-family: 'Fraunces', serif; font-weight: 500; font-size: 17px; color: var(--text); margin-bottom: 10px; }
   .ro-pair { display: grid; grid-template-columns: 180px 1fr; gap: 10px; margin-bottom: 8px; align-items: start; }
   .ro-pair .k { font-size: 12px; color: var(--text3); }
-  .ro-pair .v { font-size: 13.5px; color: var(--text); white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; min-width: 0; max-width: 100%; }
+  .ro-pair .v { font-size: 13.5px; color: var(--text); white-space: pre-wrap; word-break: break-all; overflow-wrap: anywhere; min-width: 0; max-width: 100%; }
   .ro-narrative { margin-bottom: 14px; }
   .ro-narrative .lbl { font-size: 12px; color: var(--text3); margin-bottom: 5px; }
-  .ro-narrative .v { font-size: 13.5px; color: var(--text); line-height: 1.6; padding: 10px 14px; background: var(--surface-warm); border: 1px solid var(--border); border-radius: var(--radius-sm); white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; min-height: 26px; max-width: 100%; box-sizing: border-box; }
+  .ro-narrative .v { font-size: 13.5px; color: var(--text); line-height: 1.6; padding: 10px 14px; background: var(--surface-warm); border: 1px solid var(--border); border-radius: var(--radius-sm); white-space: pre-wrap; word-break: break-all; overflow-wrap: anywhere; min-height: 26px; max-width: 100%; box-sizing: border-box; }
   .ro-factor { padding: 12px 0; border-bottom: 1px solid var(--border); }
   .ro-factor:first-child { padding-top: 4px; }
   .ro-factor:last-child { border-bottom: none; padding-bottom: 4px; }
@@ -239,7 +239,7 @@
   .ro-factor-name { font-size: 13.5px; font-weight: 500; color: var(--text); display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; word-break: break-word; overflow-wrap: anywhere; }
   .ro-factor-num { font-family: 'DM Mono', monospace; color: var(--text3); font-size: 11px; flex-shrink: 0; }
   .ro-factor-no-grade { color: var(--text3); font-size: 12px; font-style: italic; }
-  .ro-factor-comments { font-size: 13px; color: var(--text2); line-height: 1.55; padding-left: 28px; padding-right: 4px; white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; max-width: 100%; box-sizing: border-box; }
+  .ro-factor-comments { font-size: 13px; color: var(--text2); line-height: 1.55; padding-left: 28px; padding-right: 4px; white-space: pre-wrap; word-break: break-all; overflow-wrap: anywhere; max-width: 100%; box-sizing: border-box; }
   .ro-factor { max-width: 100%; }
   .ro-factor-head { max-width: 100%; }
   .ro-section { max-width: 100%; }
@@ -1360,7 +1360,7 @@
       html2pdf().set({
         margin: [12, 12, 12, 12],
         filename: filename,
-        image: { type: 'jpeg', quality: 0.95 },
+        image: { type: 'png' },
         html2canvas: { scale: 2, useCORS: true, backgroundColor: '#FFFFFF', logging: false },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
         pagebreak: { mode: ['css', 'legacy'] }
